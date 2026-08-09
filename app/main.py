@@ -20,7 +20,13 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200", "http://127.0.0.1:4200", "https://juanrbcode.github.io/Survey-Flow/"],
+    allow_origins=[
+        "http://localhost:4200", 
+        "http://127.0.0.1:4200", 
+        "https://juanrbcode.github.io/Survey-Flow/",
+        "https://juanrbcode.github.io/Survey-Flow",
+        "https://juanrbcode.github.io"
+        ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -1,21 +1,33 @@
-import sys
-import asyncio
-from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from playwright.async_api import async_playwright
 from app.routes.automation import router
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    if sys.platform == "win32":
-        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-    yield
+# Variables globales para el navegador compartido
+_playwright_instance = None
+browser_instance = None
+
+async def get_global_browser():
+    """Inicializa el navegador global una sola vez de forma perezosa (Lazy Singleton)"""
+    global _playwright_instance, browser_instance
+    if browser_instance is None:
+        print("🚀 Iniciando navegador global en memoria...")
+        _playwright_instance = await async_playwright().start()
+        browser_instance = await _playwright_instance.chromium.launch(
+            headless=True,
+            args=[
+                "--no-sandbox", 
+                "--disable-setuid-sandbox", 
+                "--disable-dev-shm-usage", 
+                "--disable-gpu"
+            ]
+        )
+    return browser_instance
 
 app = FastAPI(
     title="Survey Automation API",
-    description="API para automatización de encuestas",
-    version="1.0.0",
-    lifespan=lifespan
+    description="API optimizada con navegador global",
+    version="1.0.0"
 )
 
 app.add_middleware(
@@ -26,7 +38,7 @@ app.add_middleware(
         "https://juanrbcode.github.io/Survey-Flow/",
         "https://juanrbcode.github.io/Survey-Flow",
         "https://juanrbcode.github.io"
-        ],
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -40,6 +52,4 @@ app.include_router(
 
 @app.get("/")
 def root():
-    return {
-        "message": "Survey Automation API funcionando correctamente"
-    }
+    return {"message": "Survey Automation API con navegador global activa"}

@@ -1,22 +1,24 @@
-import asyncio
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, HTTPException
 from app.services.qr_service import read_qr
-from app.services.survey_service import _process_survey_sync
+from app.services.survey_service import open_survey, inspect_survey, process_survey_async
 
 router = APIRouter()
 
-# --------------------------------------------------
-# Endpoint Maestro (Usado por Angular para envío masivo)
-# --------------------------------------------------
+# Función auxiliar con importación perezosa para romper el ciclo circular
+def get_browser_instance():
+    from app.main import get_global_browser
+    # Como get_global_browser es una corrutina, la manejamos donde se requiera
+    return get_global_browser
 
 @router.post("/process-all")
 async def process_all_qrs(files: list[UploadFile] = File(...)):
+    from app.main import get_global_browser
+    browser_instance = await get_global_browser()
     results = []
 
     for file in files:
         contents = await file.read()
         
-        # 1. Leer el QR
         url = read_qr(contents)
         if not url:
             results.append({
@@ -26,9 +28,8 @@ async def process_all_qrs(files: list[UploadFile] = File(...)):
             })
             continue
 
-        # 2. Rellenar la encuesta en un hilo independiente (To avoid Windows asyncio subprocess issues)
         try:
-            survey_res = await asyncio.to_thread(_process_survey_sync, url)
+            survey_res = await process_survey_async(browser_instance, url)
             results.append({
                 "filename": file.filename,
                 "url": url,
@@ -49,75 +50,32 @@ async def process_all_qrs(files: list[UploadFile] = File(...)):
         "results": results
     }
 
-
-
-# --------------------------------------------------
-# Endpoints Individuales (Existentes)
-# --------------------------------------------------
 @router.post("/qr")
 async def read_qr_endpoint(file: UploadFile = File(...)):
     image_bytes = await file.read()
     url = read_qr(image_bytes)
 
     if not url:
-        raise HTTPException(
-            status_code=400,
-            detail="No se encontró un código QR válido."
-        )
+        raise HTTPException(status_code=400, detail="No se encontró un código QR válido.")
 
     return {"success": True, "url": url}
 
-
 @router.post("/open-survey")
-def open_survey_endpoint(url: str):
-
+async def open_survey_endpoint(url: str):
+    from app.main import get_global_browser
+    browser_instance = await get_global_browser()
     try:
-
-        result = open_survey(url)
-
-        return {
-            "success": True,
-            "result": result
-        }
-
+        result = await open_survey(browser_instance, url)
+        return {"success": True, "result": result}
     except Exception as e:
-
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
-
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/inspect")
-def inspect_survey_endpoint(url: str):
-
+async def inspect_survey_endpoint(url: str):
+    from app.main import get_global_browser
+    browser_instance = await get_global_browser()
     try:
-
-        result = inspect_survey(url)
-
-        return {
-            "success": True,
-            "result": result
-        }
-
+        result = await inspect_survey(browser_instance, url)
+        return {"success": True, "result": result}
     except Exception as e:
-
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
-
-
-@router.post("/fill-survey")
-def fill_survey_endpoint(url: str):
-    try:
-        result = fill_survey(url)
-        return {
-            "success": True,
-            "result": result
-        }
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=500, detail=str(e))

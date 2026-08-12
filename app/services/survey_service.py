@@ -87,7 +87,15 @@ async def process_survey_async(browser, url: str, proxy_config: dict = None):
 
     try:
         # 1. Cargar la página de forma rápida con domcontentloaded
+        # --- PRUEBA DE IP (Opcional solo para verificar) ---
+        ip_page = await context.new_page()
+        await ip_page.goto("https://api.ipify.org?format=json")
+        print("IP actual del contexto:", await ip_page.content())
+        await ip_page.close() # Cerramos la pestaña de la IP
+        # --------------------------------------------------
+
         await page.goto(url, wait_until="domcontentloaded")
+        
 
         # 2. VERIFICACIÓN TEMPRANA
         already_done_selectors = [

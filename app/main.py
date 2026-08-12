@@ -6,7 +6,6 @@ from app.routes.automation import router
 # Variables globales para el navegador compartido
 _playwright_instance = None
 browser_instance = None
-
 async def get_global_browser():
     """Inicializa el navegador global una sola vez de forma perezosa (Lazy Singleton)"""
     global _playwright_instance, browser_instance
@@ -14,12 +13,14 @@ async def get_global_browser():
         print("🚀 Iniciando navegador global en memoria...")
         _playwright_instance = await async_playwright().start()
         browser_instance = await _playwright_instance.chromium.launch(
-            headless=True,
+            headless=True,  # Ponlo en False temporalmente para que veas cómo abre
             args=[
                 "--no-sandbox", 
                 "--disable-setuid-sandbox", 
                 "--disable-dev-shm-usage", 
-                "--disable-gpu"
+                "--disable-gpu",
+                "--disable-blink-features=AutomationControlled", # <-- ESTO ES CLAVE PARA OCULTAR QUE ES UN BOT
+                "--start-maximized"
             ]
         )
     return browser_instance

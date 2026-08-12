@@ -4,8 +4,31 @@ from faker import Faker
 
 fake = Faker('es')
 
-async def open_survey(browser, url: str):
-    page = await browser.new_page()
+# Lista de agentes de usuario para simular diferentes dispositivos y clientes reales
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/605.1.15",
+    "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+]
+
+def _get_context_options(proxy_config: dict = None):
+    """Genera opciones de contexto aleatorias para evitar la detección por huella de dispositivo"""
+    chosen_user_agent = random.choice(USER_AGENTS)
+    options = {
+        "user_agent": chosen_user_agent,
+        "viewport": {"width": random.choice([1280, 1366, 1920, 375]), "height": random.choice([800, 768, 1080, 667])},
+        "device_scale_factor": random.choice([1, 2]),
+        "is_mobile": "Mobile" in chosen_user_agent or "iPhone" in chosen_user_agent
+    }
+    if proxy_config:
+        options["proxy"] = proxy_config
+    return options
+
+async def open_survey(browser, url: str, proxy_config: dict = None):
+    context_options = _get_context_options(proxy_config)
+    context = await browser.new_context(**context_options)
+    page = await context.new_page()
     try:
         await page.goto(url, wait_until="domcontentloaded")
         title = await page.title()
@@ -14,16 +37,18 @@ async def open_survey(browser, url: str):
             "url": url
         }
     finally:
-        await page.close()
+        await context.close()
 
-async def inspect_survey(browser, url: str):
-    page = await browser.new_page()
+async def inspect_survey(browser, url: str, proxy_config: dict = None):
+    context_options = _get_context_options(proxy_config)
+    context = await browser.new_context(**context_options)
+    page = await context.new_page()
     try:
         await page.goto(url, wait_until="domcontentloaded")
         await page.wait_for_timeout(1500) # Reducido para mayor velocidad
 
-        start_button = page.get_by_role("button", name="Empezar")
-        if await start_button.count() > 0:
+        start_button = page.locator("button[data-testid='link-text-0']")
+        if await start_button.count() > 0 and await start_button.is_visible():
             await start_button.click()
             await page.wait_for_timeout(1000)
 
@@ -52,11 +77,13 @@ async def inspect_survey(browser, url: str):
             "fields": result
         }
     finally:
-        await page.close()
+        await context.close()
 
-async def process_survey_async(browser, url: str):
-    # Usamos el navegador global pasado por parámetro
-    page = await browser.new_page()
+async def process_survey_async(browser, url: str, proxy_config: dict = None):
+    # Creamos un contexto con huella de dispositivo única e independiente
+    context_options = _get_context_options(proxy_config)
+    context = await browser.new_context(**context_options)
+    page = await context.new_page()
 
     try:
         # 1. Cargar la página de forma rápida con domcontentloaded
@@ -77,10 +104,18 @@ async def process_survey_async(browser, url: str):
                 raise Exception("Encuesta ya realizada o QR caducado")
 
         # Paso 0: Botón "Empezar"
-        start_btn = page.get_by_role("button", name="Empezar")
-        if await start_btn.count() > 0 and await start_btn.is_visible():
+        # Paso 0: Botón "Empezar" usando su data-testid exacto
+        start_btn = page.locator("button[data-testid='link-text-0']")
+        try:
+            await start_btn.wait_for(state="visible", timeout=5000)
             await start_btn.click()
-            await page.wait_for_timeout(500)
+            await page.wait_for_timeout(800)
+        except Exception:
+            # Plan B por si el testid varía, buscando por texto directamente
+            fallback_btn = page.locator("button", has_text="Empezar")
+            if await fallback_btn.count() > 0 and await fallback_btn.is_visible():
+                await fallback_btn.click()
+                await page.wait_for_timeout(800)
 
         # Re-verificación
         for selector in already_done_selectors:
@@ -164,4 +199,4 @@ async def process_survey_async(browser, url: str):
         return {"status": "completed"}
 
     finally:
-        await page.close()
+        await context.close()

@@ -4,10 +4,8 @@ from app.services.survey_service import open_survey, inspect_survey, process_sur
 
 router = APIRouter()
 
-# Función auxiliar con importación perezosa para romper el ciclo circular
 def get_browser_instance():
     from app.main import get_global_browser
-    # Como get_global_browser es una corrutina, la manejamos donde se requiera
     return get_global_browser
 
 @router.post("/process-all")
@@ -16,7 +14,14 @@ async def process_all_qrs(files: list[UploadFile] = File(...)):
     browser_instance = await get_global_browser()
     results = []
 
-    for file in files:
+    # Pool de proxies simulado para la rotación de IPs (puedes añadir más si te dio IPs reales el profesor)
+    proxy_pool = [
+        None, # Petición limpia por defecto
+        # {"server": "http://proxy_ip_1:puerto"},
+        # {"server": "http://proxy_ip_2:puerto"}
+    ]
+
+    for index, file in enumerate(files):
         contents = await file.read()
         
         url = read_qr(contents)
@@ -28,8 +33,12 @@ async def process_all_qrs(files: list[UploadFile] = File(...)):
             })
             continue
 
+        # Asigna un proxy rotativo diferente por cada iteración/encuesta
+        current_proxy = proxy_pool[index % len(proxy_pool)]
+
         try:
-            survey_res = await process_survey_async(browser_instance, url)
+            # Se le pasa el proxy_config para cambiar la IP de origen en cada contexto
+            survey_res = await process_survey_async(browser_instance, url, proxy_config=current_proxy)
             results.append({
                 "filename": file.filename,
                 "url": url,

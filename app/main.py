@@ -13,7 +13,7 @@ async def get_global_browser():
         print("🚀 Iniciando navegador global en memoria...")
         _playwright_instance = await async_playwright().start()
         browser_instance = await _playwright_instance.chromium.launch(
-            headless=False,  # Ponlo en False temporalmente para que veas cómo abre
+            headless=True,  # Ponlo en False temporalmente para que veas cómo abre
             args=[
                 "--no-sandbox", 
                 "--disable-setuid-sandbox", 

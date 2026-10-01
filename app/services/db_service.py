@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 
 fake = Faker('es')
 
-# 1. Intentamos leer DATABASE_URL o MYSQL_URL que provee Railway
+# 1. Intentamos leer DATABASE_URL o MYSQL_URL que provee Railway a
 DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("MYSQL_URL")
 
 if DATABASE_URL:

@@ -1,3 +1,4 @@
+from app.services.db_service import SessionLocal, PersonaModel
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from typing import List, Optional
 import json
@@ -5,7 +6,6 @@ from app.services.qr_service import read_qr
 from app.services.survey_service import process_survey_async
 from app.services.proxy_service import load_proxy_pool
 from pydantic import BaseModel
-import sqlite3
 
 
 router = APIRouter()
@@ -80,28 +80,25 @@ class PersonaCreate(BaseModel):
     telefono: str
     dni: str
 
+
 # 2. Crear la ruta POST para registrar la persona
 @router.post("/personas", summary="Registrar nueva persona")
 def crear_persona(persona: PersonaCreate):
+    db = SessionLocal()
     try:
-        conn = sqlite3.connect("personas.db") # O la ruta donde tengas tu BD
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            INSERT INTO personas (nombres, apellidos, email, telefono, dni)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (
-            persona.nombres, 
-            persona.apellidos, 
-            persona.email, 
-            persona.telefono, 
-            persona.dni
-        ))
-        
-        conn.commit()
-        conn.close()
-        
+        nueva_persona = PersonaModel(
+            nombres=persona.nombres,
+            apellidos=persona.apellidos,
+            email=persona.email,
+            telefono=persona.telefono,
+            dni=persona.dni
+        )
+        db.add(nueva_persona)
+        db.commit()
+        db.refresh(nueva_persona)
         return {"status": "success", "message": "¡Persona registrada correctamente en la base de datos!"}
-    
     except Exception as e:
-        raise HTTPException(status_code=500, error=str(e), detail=f"Error al guardar en la base de datos: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al guardar en la base de datos: {str(e)}")
+    finally:
+        db.close()

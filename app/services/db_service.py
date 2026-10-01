@@ -1,7 +1,7 @@
 import os
 import random
 from faker import Faker
-from sqlalchemy import create_engine, Column, Integer, String, func
+from sqlalchemy import create_engine, Column, Integer, String, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -28,7 +28,7 @@ class PersonaModel(Base):
     dni = Column(String(50), nullable=False)
 
 def init_db():
-    # Crea las tablas automáticamente si no existen
+    # Crea las tablas automáticamente si no existen en Railway (MySQL) o Local (SQLite)
     Base.metadata.create_all(bind=engine)
     
     db = SessionLocal()
@@ -53,12 +53,15 @@ def init_db():
         db.close()
 
 def get_persona_data():
+    # Mantenemos tu lógica híbrida: alterna entre base de datos real y datos aleatorios de Faker
     use_db = random.choice([True, False])
     
     if use_db:
         db = SessionLocal()
         try:
-            persona = db.query(PersonaModel).order_by(func.rand()).first()
+            # Selecciona aleatoriamente usando RAND() para MySQL (Railway) o RANDOM() para SQLite (Local)
+            random_func = text("RANDOM()") if "sqlite" in DATABASE_URL.lower() else text("RAND()")
+            persona = db.query(PersonaModel).order_by(random_func).first()
             
             if persona:
                 return {
@@ -69,11 +72,11 @@ def get_persona_data():
                     "dni": persona.dni
                 }
         except Exception as e:
-            print(f"Error consultando la base de datos: {e}")
+            print(f"Error consultando la base de datos, usando plan B aleatorio: {e}")
         finally:
             db.close()
 
-    # Plan B: inventado directamente con Faker
+    # Plan B / Opción aleatoria con Faker
     return {
         "nombres": fake.first_name(),
         "apellidos": fake.last_name(),

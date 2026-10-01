@@ -21,17 +21,16 @@ else:
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
-
-
 class PersonaModel(Base):
     __tablename__ = "personas"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     nombres = Column(String(100), nullable=False)
     apellidos = Column(String(100), nullable=False)
-    email = Column(String(100), nullable=False)
+    email = Column(String(100), nullable=False, unique=True) 
     telefono = Column(String(50), nullable=False)
-    dni = Column(String(50), nullable=False)
+    dni = Column(String(50), nullable=False, unique=True)
+
 
 def init_db():
     Base.metadata.create_all(bind=engine)
@@ -40,20 +39,65 @@ def init_db():
         count = db.query(PersonaModel).count()
         if count == 0:
             sample_data = []
-            for _ in range(50):
-                persona = PersonaModel(
-                    nombres=fake.first_name(),
-                    apellidos=fake.last_name(),
-                    email=fake.email(domain="gmail.com"),
-                    telefono=f"9{random.randint(10000000, 99999999)}",
-                    dni=str(random.randint(10000000, 99999999))
-                )
-                sample_data.append(persona)
+            # Usamos un conjunto para evitar duplicados en la misma tanda inicial
+            emails_generados = set()
+            dnis_generados = set()
+            
+            while len(sample_data) < 50:
+                email = fake.email(domain="gmail.com")
+                dni = str(random.randint(10000000, 99999999))
+                
+                if email not in emails_generados and dni not in dnis_generados:
+                    emails_generados.add(email)
+                    dnis_generados.add(dni)
+                    
+                    persona = PersonaModel(
+                        nombres=fake.first_name(),
+                        apellidos=fake.last_name(),
+                        email=email,
+                        telefono=f"9{random.randint(10000000, 99999999)}",
+                        dni=dni
+                    )
+                    sample_data.append(persona)
+                    
             db.add_all(sample_data)
             db.commit()
-            print("📦 Datos iniciales insertados correctamente.")
+            print("📦 Datos iniciales insertados correctamente sin duplicados.")
     finally:
         db.close()
+
+
+def insertar_persona_si_no_existe(nombres, apellidos, email, telefono, dni):
+    """Función de utilidad para insertar validando que no exista el DNI o Email."""
+    db = SessionLocal()
+    try:
+        # Verificamos si ya existe alguien con el mismo email o DNI
+        existe = db.query(PersonaModel).filter(
+            (PersonaModel.email == email) | (PersonaModel.dni == dni)
+        ).first()
+
+        if existe:
+            print(f"⚠️ El registro con email {email} o DNI {dni} ya existe en la base de datos.")
+            return False
+
+        nueva_persona = PersonaModel(
+            nombres=nombres,
+            apellidos=apellidos,
+            email=email,
+            telefono=telefono,
+            dni=dni
+        )
+        db.add(nueva_persona)
+        db.commit()
+        print("✅ Persona registrada exitosamente.")
+        return True
+    except Exception as e:
+        db.rollback()
+        print(f"❌ Error al insertar: {e}")
+        return false
+    finally:
+        db.close()
+
 
 def get_persona_data():
     use_db = random.choice([True, False])

@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     libpango-1.0-0 \
     libcairo2 \
     libasound2 \
+    libxkbcommon0 \
     xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
@@ -33,5 +34,5 @@ RUN playwright install chromium
 
 COPY . .
 
-# Forzar el puerto 8000 fijo para que coincida exactamente con Railway
+# Servidor corriendo exactamente en el puerto 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

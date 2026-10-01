@@ -94,7 +94,7 @@ def insertar_persona_si_no_existe(nombres, apellidos, email, telefono, dni):
     except Exception as e:
         db.rollback()
         print(f"❌ Error al insertar: {e}")
-        return false
+        return False
     finally:
         db.close()
 

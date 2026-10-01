@@ -8,11 +8,8 @@ nixPkgs = [
     "cups",
     "dbus",
     "libdrm",
-    "libatasmart",
-    "libgudev",
     "pciutils",
     "mesa",
-    "libgbm",
     "alsa-lib",
     "cairo",
     "pango",
@@ -29,10 +26,7 @@ nixPkgs = [
     "xorg_libXrender",
     "xorg_libXScrnSaver",
     "xorg_libXtst",
-    "xorg_xkbfile",
-    "xorg_libXxf86vm",
     "libxcb",
-    "xorg_libxkbcommon",
     "xdg-utils"
 ]
 

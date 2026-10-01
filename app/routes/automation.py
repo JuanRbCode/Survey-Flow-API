@@ -15,14 +15,14 @@ async def process_all_qrs(
     files: List[UploadFile] = File(default=[]),
     scanned_texts: Optional[str] = Form(default=None)
 ):
-    from main import get_global_browser
+    from app.main import get_global_browser
     browser_instance = await get_global_browser()
     results = []
     
     # Cargar el pool de proxies desde el archivo local proxy_list.txt
     proxy_pool = load_proxy_pool()
 
-    # Procesar elementos que provienen de archivos de imagen subidos
+    # Procesar elementos que provienen de archivos de imagen subidos/fotos de QR
     queue_items = []
     for file in files:
         contents = await file.read()

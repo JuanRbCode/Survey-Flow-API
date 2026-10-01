@@ -1,4 +1,4 @@
-from app.services.db_service import SessionLocal, PersonaModel
+from app.services.db_service import SessionLocal, PersonaModel, insertar_persona_si_no_existe
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from typing import List, Optional
 import json
@@ -84,21 +84,20 @@ class PersonaCreate(BaseModel):
 # 2. Crear la ruta POST para registrar la persona
 @router.post("/personas", summary="Registrar nueva persona")
 def crear_persona(persona: PersonaCreate):
-    db = SessionLocal()
-    try:
-        nueva_persona = PersonaModel(
-            nombres=persona.nombres,
-            apellidos=persona.apellidos,
-            email=persona.email,
-            telefono=persona.telefono,
-            dni=persona.dni
+    # Llamamos a nuestra función robusta que valida si existe
+    exito = insertar_persona_si_no_existe(
+        nombres=persona.nombres,
+        apellidos=persona.apellidos,
+        email=persona.email,
+        telefono=persona.telefono,
+        dni=persona.dni
+    )
+    
+    if not exito:
+        # Si devuelve False, significa que ya está registrado (lanza un 400 limpio al frontend)
+        raise HTTPException(
+            status_code=400, 
+            detail="⚠️ El correo o el DNI ya se encuentran registrados en la base de datos."
         )
-        db.add(nueva_persona)
-        db.commit()
-        db.refresh(nueva_persona)
-        return {"status": "success", "message": "¡Persona registrada correctamente en la base de datos!"}
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error al guardar en la base de datos: {str(e)}")
-    finally:
-        db.close()
+        
+    return {"status": "success", "message": "¡Persona registrada correctamente en la base de datos!"}

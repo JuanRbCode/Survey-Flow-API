@@ -1,4 +1,3 @@
-Ini, TOML
 [phases.setup]
 nixPkgs = [
     "python312",
@@ -19,21 +18,21 @@ nixPkgs = [
     "pango",
     "gdk-pixbuf",
     "gtk3",
-    "xorg.libX11",
-    "xorg.libXcomposite",
-    "xorg.libXcursor",
-    "xorg.libXdamage",
-    "xorg.libXext",
-    "xorg.libXfixes",
-    "xorg.libXi",
-    "xorg.libXrandr",
-    "xorg.libXrender",
-    "xorg.libXScrnSaver",
-    "xorg.libXtst",
-    "xorg.xkbfile",
-    "xorg.libXxf86vm",
+    "xorg_libX11",
+    "xorg_libXcomposite",
+    "xorg_libXcursor",
+    "xorg_libXdamage",
+    "xorg_libXext",
+    "xorg_libXfixes",
+    "xorg_libXi",
+    "xorg_libXrandr",
+    "xorg_libXrender",
+    "xorg_libXScrnSaver",
+    "xorg_libXtst",
+    "xorg_xkbfile",
+    "xorg_libXxf86vm",
     "libxcb",
-    "xorg.libxkbcommon",
+    "xorg_libxkbcommon",
     "xdg-utils"
 ]
 

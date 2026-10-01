@@ -1,0 +1,17 @@
+# Entorno virtual
+venv/
+env/
+ENV/
+
+# Archivos de Python y caché
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Base de datos local (para que se cree limpia en producción o se gestione aparte)
+personas.db
+
+# Archivos de entorno y logs
+.env
+*.log

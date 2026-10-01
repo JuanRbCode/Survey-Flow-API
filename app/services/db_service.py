@@ -10,27 +10,19 @@ fake = Faker('es')
 # 1. Intentamos leer DATABASE_URL o MYSQL_URL que provee Railway a
 DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("MYSQL_URL")
 
-if DATABASE_URL:
-    # Aseguramos que SQLAlchemy use el driver pymysql para MySQL
-    if DATABASE_URL.startswith("mysql://"):
-        DATABASE_URL = DATABASE_URL.replace("mysql://", "mysql+pymysql://", 1)
-else:
-    # 2. Si no hay una URL directa, intentamos armarla con las variables separadas de Railway
-    mysql_host = os.getenv("MYSQLHOST")
-    if mysql_host:
-        user = os.getenv("MYSQLUSER", "root")
-        password = os.getenv("MYSQL_PASSWORD") or os.getenv("MYSQLPASSWORD") or os.getenv("MYSQL_ROOT_PASSWORD", "")
-        port = os.getenv("MYSQLPORT", "3306")
-        database = os.getenv("MYSQL_DATABASE") or os.getenv("MYSQLDATABASE", "railway")
-        DATABASE_URL = f"mysql+pymysql://{user}:{password}@{mysql_host}:{port}/{database}"
-    else:
-        # 3. Plan B local: SQLite si estás probando en tu PC
-        DATABASE_URL = "sqlite:///./personas.db"
+# Lee la URL de la base de datos desde Railway
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    # Respaldo local si pruebas en tu PC
+    DATABASE_URL = "sqlite:///./personas.db"
+elif DATABASE_URL.startswith("mysql://"):
+    # Asegura el driver pymysql para MySQL en la nube
+    DATABASE_URL = DATABASE_URL.replace("mysql://", "mysql+pymysql://", 1)
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
-
 
 class PersonaModel(Base):
     __tablename__ = "personas"

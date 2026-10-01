@@ -1,5 +1,6 @@
 import os
 import random
+from urllib.parse import quote_plus
 from faker import Faker
 from sqlalchemy import create_engine, Column, Integer, String, text
 from sqlalchemy.ext.declarative import declarative_base
@@ -7,20 +8,31 @@ from sqlalchemy.orm import sessionmaker
 
 fake = Faker('es')
 
-# 1. Intentamos leer DATABASE_URL o MYSQL_URL que provee Railway a
+# 1. Capturamos las variables de Railway de forma individual o por URL
 DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("MYSQL_URL")
 
-# Lee la URL de la base de datos desde Railway
-DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL:
+    if DATABASE_URL.startswith("mysql://"):
+        DATABASE_URL = DATABASE_URL.replace("mysql://", "mysql+pymysql://", 1)
+else:
+    # Si no hay DATABASE_URL completa, la armamos asegurando codificar la contraseña (por si tiene caracteres raros)
+    mysql_host = os.getenv("MYSQLHOST")
+    if mysql_host:
+        user = os.getenv("MYSQLUSER", "root")
+        raw_password = os.getenv("MYSQL_PASSWORD") or os.getenv("MYSQLPASSWORD") or os.getenv("MYSQL_ROOT_PASSWORD", "")
+        password = quote_plus(raw_password)  # Codifica caracteres especiales de forma segura
+        port = os.getenv("MYSQLPORT", "3306")
+        database = os.getenv("MYSQL_DATABASE") or os.getenv("MYSQLDATABASE", "railway")
+        DATABASE_URL = f"mysql+pymysql://{user}:{password}@{mysql_host}:{port}/{database}"
+    else:
+        DATABASE_URL = "sqlite:///./personas.db"
 
-if not DATABASE_URL:
-    # Respaldo local si pruebas en tu PC
-    DATABASE_URL = "sqlite:///./personas.db"
-elif DATABASE_URL.startswith("mysql://"):
-    # Asegura el driver pymysql para MySQL en la nube
-    DATABASE_URL = DATABASE_URL.replace("mysql://", "mysql+pymysql://", 1)
+# Añadimos argumentos de conexión para evitar problemas con el plugin de autenticación de MySQL 8
+connect_args = {}
+if "mysql" in DATABASE_URL.lower():
+    connect_args = {"ssl": {}} # O puedes dejarlo vacío si no requiere SSL, pero pymysql maneja bien esto
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

@@ -37,3 +37,6 @@ cmds = [
 
 [phases.build]
 cmds = ["playwright install chromium"]
+
+[start]
+cmd = "export LD_LIBRARY_PATH=/nix/store/$(ls /nix/store | grep -m 1 glib-[0-9])/lib:/nix/store/$(ls /nix/store | grep -m 1 gtk3-[0-9])/lib:$LD_LIBRARY_PATH && uvicorn app.main:app --host 0.0.0.0 --port 8000"

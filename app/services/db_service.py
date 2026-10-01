@@ -1,68 +1,79 @@
-import sqlite3
+import os
 import random
 from faker import Faker
+from sqlalchemy import create_engine, Column, Integer, String, func
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
 fake = Faker('es')
-DB_NAME = "personas.db"
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+# Si estás en local y no tienes DATABASE_URL, usa SQLite como respaldo
+if not DATABASE_URL:
+    DATABASE_URL = "sqlite:///./personas.db"
+
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+
+class PersonaModel(Base):
+    __tablename__ = "personas"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    nombres = Column(String(100), nullable=False)
+    apellidos = Column(String(100), nullable=False)
+    email = Column(String(100), nullable=False)
+    telefono = Column(String(50), nullable=False)
+    dni = Column(String(50), nullable=False)
 
 def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS personas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombres TEXT NOT NULL,
-            apellidos TEXT NOT NULL,
-            email TEXT NOT NULL,
-            telefono TEXT NOT NULL,
-            dni TEXT NOT NULL
-        )
-    ''')
+    # Crea las tablas automáticamente si no existen
+    Base.metadata.create_all(bind=engine)
     
-    # Insertar datos de prueba iniciales si la tabla está vacía
-    cursor.execute("SELECT COUNT(*) FROM personas")
-    count = cursor.fetchone()[0]
-    if count == 0:
-        sample_data = []
-        for _ in range(50):
-            sample_data.append((
-                fake.first_name(),
-                fake.last_name(),
-                fake.email(domain="gmail.com"),
-                f"9{random.randint(10000000, 99999999)}",
-                str(random.randint(10000000, 99999999))
-            ))
-        cursor.executemany('''
-            INSERT INTO personas (nombres, apellidos, email, telefono, dni)
-            VALUES (?, ?, ?, ?, ?)
-        ''', sample_data)
-        conn.commit()
-    conn.close()
+    db = SessionLocal()
+    try:
+        count = db.query(PersonaModel).count()
+        if count == 0:
+            sample_data = []
+            for _ in range(50):
+                persona = PersonaModel(
+                    nombres=fake.first_name(),
+                    apellidos=fake.last_name(),
+                    email=fake.email(domain="gmail.com"),
+                    telefono=f"9{random.randint(10000000, 99999999)}",
+                    dni=str(random.randint(10000000, 99999999))
+                )
+                sample_data.append(persona)
+            
+            db.add_all(sample_data)
+            db.commit()
+            print("📦 Datos iniciales insertados en la base de datos correctamente.")
+    finally:
+        db.close()
 
 def get_persona_data():
-    """Consulta aleatoria a la base de datos de personas o decide inventarlos con Faker"""
-    # El servidor decide de vez en cuando si usa la DB o inventa dinámicamente
     use_db = random.choice([True, False])
     
     if use_db:
+        db = SessionLocal()
         try:
-            conn = sqlite3.connect(DB_NAME)
-            cursor = conn.cursor()
-            cursor.execute("SELECT nombres, apellidos, email, telefono, dni FROM personas ORDER BY RANDOM() LIMIT 1")
-            row = cursor.fetchone()
-            conn.close()
-            if row:
+            persona = db.query(PersonaModel).order_by(func.rand()).first()
+            
+            if persona:
                 return {
-                    "nombres": row[0],
-                    "apellidos": row[1],
-                    "email": row[2],
-                    "telefono": row[3],
-                    "dni": row[4]
+                    "nombres": persona.nombres,
+                    "apellidos": persona.apellidos,
+                    "email": persona.email,
+                    "telefono": persona.telefono,
+                    "dni": persona.dni
                 }
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Error consultando la base de datos: {e}")
+        finally:
+            db.close()
 
-    # Plan B o inventado directamente con formato real (@gmail.com, etc.)
+    # Plan B: inventado directamente con Faker
     return {
         "nombres": fake.first_name(),
         "apellidos": fake.last_name(),

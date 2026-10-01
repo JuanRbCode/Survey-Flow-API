@@ -1,3 +1,4 @@
+Ini, TOML
 [phases.setup]
 nixPkgs = [
     "python312",
@@ -13,9 +14,7 @@ nixPkgs = [
     "pciutils",
     "mesa",
     "libgbm",
-    "asoundlib",
     "alsa-lib",
-    "atk",
     "cairo",
     "pango",
     "gdk-pixbuf",
@@ -43,3 +42,6 @@ cmds = [
     "pip install -r requirements.txt",
     "playwright install chromium"
 ]
+
+[start]
+cmd = "playwright install chromium && uvicorn app.main:app --host 0.0.0.0 --port $PORT"

@@ -33,5 +33,5 @@ RUN playwright install chromium
 
 COPY . .
 
-# Usar formato exec de JSON para que Railway reemplace correctamente la variable $PORT
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Forzar el puerto 8000 fijo para que coincida exactamente con Railway
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

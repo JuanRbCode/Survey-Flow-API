@@ -33,7 +33,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://juanrbcode.github.io/Survey-Flow/"],
+    allow_origins=["https://juanrbcode.github.io"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

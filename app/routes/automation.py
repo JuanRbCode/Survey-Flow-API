@@ -15,7 +15,7 @@ async def process_all_qrs(
     files: List[UploadFile] = File(default=[]),
     scanned_texts: Optional[str] = Form(default=None)
 ):
-    from app.main import get_global_browser
+    from main import get_global_browser
     browser_instance = await get_global_browser()
     results = []
     

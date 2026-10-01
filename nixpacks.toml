@@ -1,3 +1,4 @@
+Ini, TOML
 [phases.setup]
 nixPkgs = [
     "python312",
@@ -26,7 +27,6 @@ nixPkgs = [
     "xorg_libXrender",
     "xorg_libXScrnSaver",
     "xorg_libXtst",
-    "libxcb",
     "xdg-utils"
 ]
 
